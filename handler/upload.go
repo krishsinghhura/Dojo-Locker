@@ -2,10 +2,7 @@ package handler
 
 import (
 	"Dojo-Locker/utils"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -31,6 +28,7 @@ func UploadForHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//
 	tempFile, err := os.CreateTemp("uploads", "uploads-*")
 	if err != nil {
 		log.Println("Error creating temp file:", err)
@@ -39,28 +37,11 @@ func UploadForHash(w http.ResponseWriter, r *http.Request) {
 
 	defer tempFile.Close()
 
-	_, err = io.Copy(tempFile, file)
+	hashString, err := utils.GenerateSha(tempFile.Name())
 	if err != nil {
-		http.Error(w, "Error saving the file", http.StatusInternalServerError)
-		return
-	}
-
-	reopenedFile, err := os.Open(tempFile.Name())
-	if err != nil {
-		http.Error(w, "Error opening the file for hashing", http.StatusInternalServerError)
-		return
-	}
-	defer reopenedFile.Close()
-
-	hash := sha256.New()
-	if _, err := io.Copy(hash, reopenedFile); err != nil {
 		http.Error(w, "Error generating hash", http.StatusInternalServerError)
 		return
 	}
-
-	hashString := hex.EncodeToString(hash.Sum(nil))
-
-	fmt.Printf("File: %s | hash: %s\n", handler.Filename, hashString)
 
 	pvtKey, pbcKey, err := utils.GeneratePandPkey(hashString)
 	if err != nil {
